@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AniPulse</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .skeleton { background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .hero-gradient { background: linear-gradient(to top, #030712 10%, rgba(3,7,18,0.6) 50%, rgba(3,7,18,0.2) 100%); }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .media-tab.active { background-color: #9333ea; color: white; }
+    .media-tab { background-color: #1f2937; color: #9ca3af; }
+    .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+    .sidebar-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+    .sb-item { border-left: 3px solid transparent; transition: all 0.15s; }
+    .sb-item:hover { border-left-color: #9333ea; background: rgba(147, 51, 234, 0.1); }
+    .sb-sub { transition: all 0.2s ease; }
+    .chev.rotated { transform: rotate(90deg); }
+    .sb-badge { background: rgba(147, 51, 234, 0.2); color: #c084fc; }
+  </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+
+  <header class="sticky top-0 z-40 bg-gray-900/90 backdrop-blur-md border-b border-gray-800 px-4 py-3 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <button id="hamburgerBtn" class="p-2 rounded-lg hover:bg-gray-800 transition-colors" aria-label="Menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <a href="index.html" class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">🎌 AniPulse</a>
+    </div>
+    <div id="userArea" class="flex items-center gap-3"></div>
+  </header>
+
+  <!-- Sidebar Overlay -->
+  <div id="sidebarOverlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed top-0 left-0 h-full w-80 bg-gray-900 border-r border-gray-800 z-50 -translate-x-full transition-transform duration-300 ease-out flex flex-col">
+    <!-- Sidebar header -->
+    <div class="p-4 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🎌</span>
+        <span class="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">AniPulse</span>
+      </div>
+      <button id="closeSidebar" class="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- User card (only if logged in) -->
+    <div id="sidebarUser" class="hidden p-4 border-b border-gray-800 flex-shrink-0">
+      <a href="profile.html" class="flex items-center gap-3 hover:bg-gray-800/50 rounded-lg p-2 -m-2 transition">
+        <div id="sbAvatar" class="w-11 h-11 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center font-bold text-lg flex-shrink-0"></div>
+        <div class="min-w-0">
+          <p id="sbUsername" class="font-semibold truncate"></p>
+          <p id="sbEmail" class="text-xs text-gray-500 truncate"></p>
+        </div>
+      </a>
+    </div>
+
+    <!-- Nav groups -->
+    <nav class="flex-1 overflow-y-auto sidebar-scroll p-2">
+
+      <!-- DISCOVER -->
+      <div class="mb-1">
+        <button class="sb-header w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition text-left">
+          <span class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">Discover</span>
+          <span class="chev text-gray-500 text-xs">▸</span>
+        </button>
+        <div class="sb-sub hidden pl-1 pt-1 space-y-0.5">
+          <a href="index.html" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">🏠</span> Home</a>
+          <a href="browse.html?type=anime&sort=TRENDING_DESC&title=Trending+Anime" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">🔥</span> Trending</a>
+          <a href="browse.html?type=anime&sort=SCORE_DESC&title=Top+Rated" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">🏆</span> Top Rated</a>
+          <a href="browse.html?type=anime&status=RELEASING&title=Airing+Now" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">📺</span> Airing Now</a>
+          <a href="browse.html?type=anime&status=NOT_YET_RELEASED&title=Upcoming" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">🚀</span> Upcoming</a>
+        </div>
+      </div>
+
+      <!-- GENRES -->
+      <div class="mb-1">
+        <button class="sb-header w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition text-left">
+          <span class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">Genres</span>
+          <span class="chev text-gray-500 text-xs">▸</span>
+        </button>
+        <div class="sb-sub hidden pl-1 pt-1 space-y-0.5">
+          <a href="browse.html?type=anime&genre=Action&title=Action" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">💥</span> Action</a>
+          <a href="browse.html?type=anime&genre=Romance&title=Romance" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">💕</span> Romance</a>
+          <a href="browse.html?type=anime&genre=Comedy&title=Comedy" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">😂</span> Comedy</a>
+          <a href="browse.html?type=anime&genre=Fantasy&title=Fantasy" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">🧙</span> Fantasy</a>
+          <a href="browse.html?type=anime&genre=Horror&title=Horror" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">👻</span> Horror</a>
+          <a href="browse.html?type=anime&genre=Sci-Fi&title=Sci-Fi" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">🚀</span> Sci-Fi</a>
+          <a href="browse.html?type=anime&genre=Slice+of+Life&title=Slice+of+Life" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">🌸</span> Slice of Life</a>
+          <a href="browse.html?type=anime&genre=Sports&title=Sports" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">⚽</span> Sports</a>
+        </div>
+      </div>
+
+      <!-- MY LIBRARY -->
+      <div class="mb-1">
+        <button class="sb-header w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition text-left">
+          <span class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">My Library</span>
+          <span class="chev text-gray-500 text-xs">▸</span>
+        </button>
+        <div class="sb-sub hidden pl-1 pt-1 space-y-0.5">
+          <a href="profile.html" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">👤</span> Profile</a>
+          <a href="profile.html#watchlist" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">📌</span> Watchlist</a>
+          <a href="profile.html#history" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">🕒</span> Watch History</a>
+          <a href="profile.html#favorites" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">⭐</span> Favorites</a>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="mb-1">
+        <button class="sb-header w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition text-left">
+          <span class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">Settings</span>
+          <span class="chev text-gray-500 text-xs">▸</span>
+        </button>
+        <div class="sb-sub hidden pl-1 pt-1 space-y-1">
+          <div class="flex items-center justify-between px-4 py-2.5 rounded-md text-sm text-gray-300">
+            <span class="flex items-center gap-3"><span class="text-base">🌙</span> Dark Mode</span>
+            <button id="darkToggle" class="w-10 h-5 bg-purple-600 rounded-full relative transition-colors"><span class="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full"></span></button>
+          </div>
+          <div class="px-4 py-2.5 text-sm text-gray-300">
+            <label class="flex items-center gap-3 mb-2"><span class="text-base">🌍</span> Region</label>
+            <select id="regionSelect" class="w-full bg-gray-800 border border-gray-700 rounded-md px-2 py-1.5 text-xs">
+              <option value="US">United States</option>
+              <option value="JP">Japan</option>
+              <option value="GB">United Kingdom</option>
+              <option value="PK">Pakistan</option>
+              <option value="IN">India</option>
+              <option value="CA">Canada</option>
+            </select>
+          </div>
+          <div class="flex items-center justify-between px-4 py-2.5 rounded-md text-sm text-gray-300">
+            <span class="flex items-center gap-3"><span class="text-base">🔞</span> Adult Content</span>
+            <button id="adultToggle" class="w-10 h-5 bg-gray-700 rounded-full relative transition-colors"><span class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform"></span></button>
+          </div>
+          <div class="flex items-center justify-between px-4 py-2.5 rounded-md text-sm text-gray-300">
+            <span class="flex items-center gap-3"><span class="text-base">🔔</span> Notifications</span>
+            <button id="notifToggle" class="w-10 h-5 bg-purple-600 rounded-full relative transition-colors"><span class="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full"></span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACCOUNT -->
+      <div class="mb-1">
+        <button class="sb-header w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition text-left">
+          <span class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">Account</span>
+          <span class="chev text-gray-500 text-xs">▸</span>
+        </button>
+        <div class="sb-sub hidden pl-1 pt-1 space-y-0.5" id="accountContent"></div>
+      </div>
+
+      <!-- ABOUT -->
+      <div class="mb-1">
+        <button class="sb-header w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800/50 transition text-left">
+          <span class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">About</span>
+          <span class="chev text-gray-500 text-xs">▸</span>
+        </button>
+        <div class="sb-sub hidden pl-1 pt-1">
+          <p class="px-4 py-2.5 text-xs text-gray-400 leading-relaxed">AniPulse v1.0 — Anime, movies, and TV discovery. Powered by AniList, iTunes, and TVmaze.</p>
+        </div>
+      </div>
+
+    </nav>
+
+    <div class="p-3 border-t border-gray-800 text-center flex-shrink-0">
+      <p class="text-[10px] text-gray-600">© 2026 AniPulse</p>
+    </div>
+  </aside>
+
+  <main class="p-4 md:p-8">
+    <div class="flex gap-2 mb-6 overflow-x-auto no-scrollbar">
+      <button data-media="anime" class="media-tab active text-sm font-semibold px-5 py-2 rounded-full whitespace-nowrap transition-colors">🎌 Anime</button>
+      <button data-media="movie" class="media-tab text-sm font-semibold px-5 py-2 rounded-full whitespace-nowrap transition-colors">🎬 Movies</button>
+      <button data-media="tv" class="media-tab text-sm font-semibold px-5 py-2 rounded-full whitespace-nowrap transition-colors">📺 TV Shows</button>
+    </div>
+
+    <section id="heroBanner" class="relative w-full h-[60vh] md:h-[70vh] overflow-hidden rounded-2xl hidden mb-8">
+      <img id="heroImage" src="" alt="" class="absolute inset-0 w-full h-full object-cover" />
+      <div class="absolute inset-0 hero-gradient"></div>
+      <div class="absolute bottom-0 left-0 right-0 p-6 md:p-12 z-10">
+        <span class="inline-block bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded mb-3">#1 TRENDING</span>
+        <h1 id="heroTitle" class="text-3xl md:text-5xl font-extrabold mb-3 drop-shadow-lg"></h1>
+        <div id="heroMeta" class="flex flex-wrap items-center gap-3 text-sm mb-4 text-gray-300"></div>
+        <p id="heroDesc" class="text-gray-300 text-sm md:text-base max-w-2xl mb-6 line-clamp-3"></p>
+        <a id="heroWatch" href="#" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-3 rounded-lg transition-colors inline-block">▶ View Details</a>
+      </div>
+    </section>
+
+    <div class="mb-8 max-w-2xl">
+      <div class="relative">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">🔍</span>
+        <input id="searchInput" type="text" placeholder="Search anime, movies, TV shows..." class="w-full bg-gray-900 border border-gray-700 rounded-xl pl-12 pr-12 py-4 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg" />
+        <span id="searchSpinner" class="absolute right-4 top-1/2 -translate-y-1/2 text-purple-400 text-sm animate-spin hidden">⚙️</span>
+        <button id="clearSearch" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-xl hidden">✕</button>
+      </div>
+    </div>
+
+    <section id="searchResultsSection" class="hidden">
+      <div class="mb-6"><h2 class="text-2xl font-bold">Search Results</h2><p id="searchCount" class="text-gray-400 text-sm mt-1"></p></div>
+      <div id="searchGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+      <div id="noResults" class="text-center text-gray-500 mt-12 hidden"><p class="text-5xl mb-4">😕</p><p class="text-xl font-semibold text-white">No results found</p></div>
+    </section>
+
+    <div id="homeSections"></div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
+  <script>
+    const ANILIST_URL = 'https://graphql.anilist.co';
+    const TVMAZE_API = 'https://api.tvmaze.com';
+    // CORS-safe movie fetch: try direct, fall back to proxy
+    async function itunesFetch(url) {
+      try {
+        const r = await fetch(url);
+        if (r.ok) return await r.json();
+      } catch (e) {}
+      // Fallback via allorigins
+      try {
+        const r2 = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+        const j2 = await r2.json();
+        return JSON.parse(j2.contents);
+      } catch (e) { return { results: [] }; }
+    }
+    async function searchMovies(term, limit = 15) {
+      const url = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=movie&entity=movie&limit=${limit}&country=US`;
+      const json = await itunesFetch(url);
+      return json.results || [];
+    }
+    async function fetchAniList(query, variables = {}) {
+      const res = await fetch(ANILIST_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ query, variables }) });
+      return (await res.json()).data;
+    }
+    async function searchTV(term, limit = 10) {
+      const res = await fetch(`${TVMAZE_API}/search/shows?q=${encodeURIComponent(term)}`);
+      const json = await res.json();
+      return (json || []).slice(0, limit);
+    }
+    async function fetchTVSchedule() {
+      const today = new Date().toISOString().slice(0, 10);
+      const res = await fetch(`${TVMAZE_API}/schedule?country=US&date=${today}`);
+      return await res.json();
+    }
+
+    function createAnimeCard(a) {
+      const title = a.title.english || a.title.romaji;
+      return `<a href="anime.html?id=${a.id}" class="group relative overflow-hidden rounded-lg bg-gray-900 shadow-lg hover:ring-2 hover:ring-purple-500 transition-all block">
+        <img src="${a.coverImage.large}" alt="${title}" loading="lazy" class="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300" />
+        <div class="absolute top-1.5 right-1.5 bg-black/80 text-yellow-400 text-[10px] px-1.5 py-0.5 rounded">★ ${a.averageScore || 'N/A'}</div>
+        <div class="absolute top-1.5 left-1.5 bg-purple-900/90 text-purple-200 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase">${a.format || 'TV'}</div>
+        <div class="p-2"><h3 class="text-xs font-semibold line-clamp-2 leading-tight h-8">${title}</h3></div>
+      </a>`;
+    }
+    function createMovieCard(m) {
+      const title = m.trackName || 'Unknown';
+      const year = m.releaseDate ? m.releaseDate.slice(0, 4) : '';
+      const poster = (m.artworkUrl100 || '').replace('100x100bb', '600x600bb');
+      const genre = m.primaryGenreName || '';
+      return `<a href="movie.html?id=${m.trackId}" class="group relative overflow-hidden rounded-lg bg-gray-900 shadow-lg hover:ring-2 hover:ring-blue-500 transition-all block">
+        <img src="${poster}" alt="${title}" loading="lazy" class="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.src='https://via.placeholder.com/300x450/1f2937/9333ea?text=No+Poster'" />
+        <div class="absolute top-1.5 left-1.5 bg-blue-900/90 text-blue-200 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase">MOVIE</div>
+        <div class="p-2"><h3 class="text-xs font-semibold line-clamp-2 leading-tight h-8">${title} ${year ? `(${year})` : ''}</h3><p class="text-[10px] text-gray-500 mt-1 line-clamp-1">${genre}</p></div>
+      </a>`;
+    }
+    function createTVCard(item) {
+      const s = item.show || item;
+      const title = s.name || 'Unknown';
+      const poster = s.image?.medium || 'https://via.placeholder.com/300x450/1f2937/10b981?text=No+Poster';
+      const score = s.rating?.average || 'N/A';
+      const year = s.premiered ? s.premiered.slice(0, 4) : '';
+      return `<a href="tv.html?id=${s.id}" class="group relative overflow-hidden rounded-lg bg-gray-900 shadow-lg hover:ring-2 hover:ring-green-500 transition-all block">
+        <img src="${poster}" alt="${title}" loading="lazy" class="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300" />
+        <div class="absolute top-1.5 right-1.5 bg-black/80 text-yellow-400 text-[10px] px-1.5 py-0.5 rounded">★ ${score}</div>
+        <div class="absolute top-1.5 left-1.5 bg-green-900/90 text-green-200 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase">TV</div>
+        <div class="p-2"><h3 class="text-xs font-semibold line-clamp-2 leading-tight h-8">${title} ${year ? `(${year})` : ''}</h3></div>
+      </a>`;
+    }
+    function createSection(title, items, cardFn, viewAllUrl) {
+      if (!items || items.length === 0) return '';
+      const cards = items.map(item => `<div class="w-32 md:w-40 flex-shrink-0">${cardFn(item)}</div>`).join('');
+      return `<div class="mb-10">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xl font-bold text-purple-300">${title}</h2>
+          ${viewAllUrl ? `<a href="${viewAllUrl}" class="text-xs text-purple-400 hover:text-purple-300 font-semibold whitespace-nowrap">View All →</a>` : ''}
+        </div>
+        <div class="flex overflow-x-auto gap-3 pb-4 no-scrollbar">${cards}</div>
+      </div>`;
+    }
+    function createSkeletonRow() {
+      let cards = '';
+      for (let i = 0; i < 6; i++) cards += `<div class="w-32 md:w-40 flex-shrink-0"><div class="w-full animate-pulse"><div class="skeleton w-full aspect-[2/3] rounded-lg mb-2"></div><div class="skeleton h-3 rounded w-3/4 mb-1"></div><div class="skeleton h-3 rounded w-1/2"></div></div></div>`;
+      return `<div class="flex overflow-x-auto gap-3 pb-4 no-scrollbar">${cards}</div>`;
+    }
+    async function loadHero() {
+      const q = `query { Page(page:1,perPage:1) { media(type:ANIME,sort:TRENDING_DESC) { id title { romaji english } coverImage { large } bannerImage description(asHtml:false) averageScore format genres } } }`;
+      try {
+        const d = await fetchAniList(q);
+        const a = d.Page.media[0];
+        if (!a) return;
+        document.getElementById('heroImage').src = a.bannerImage || a.coverImage.large;
+        document.getElementById('heroTitle').textContent = a.title.english || a.title.romaji;
+        document.getElementById('heroDesc').textContent = (a.description || '').replace(/<[^>]*>/g, '').slice(0, 200) + '...';
+        document.getElementById('heroMeta').innerHTML = `<span class="text-yellow-400 font-bold">★ ${a.averageScore || 'N/A'}</span><span class="text-gray-500">•</span><span>${a.format}</span><span class="text-gray-500">•</span><span>${(a.genres || []).slice(0,3).join(', ')}</span>`;
+        document.getElementById('heroWatch').href = `anime.html?id=${a.id}`;
+        document.getElementById('heroBanner').classList.remove('hidden');
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadAnimeSections() {
+      const c = document.getElementById('homeSections');
+      c.innerHTML = createSkeletonRow() + createSkeletonRow() + createSkeletonRow();
+      const q = `query {
+        trending: Page(page:1,perPage:14) { media(type:ANIME,sort:TRENDING_DESC) { id title { romaji english } coverImage { large } averageScore format } }
+        popular: Page(page:1,perPage:14) { media(type:ANIME,sort:POPULARITY_DESC) { id title { romaji english } coverImage { large } averageScore format } }
+        topRated: Page(page:1,perPage:14) { media(type:ANIME,sort:SCORE_DESC) { id title { romaji english } coverImage { large } averageScore format } }
+        airing: Page(page:1,perPage:14) { media(type:ANIME,status:RELEASING,sort:POPULARITY_DESC) { id title { romaji english } coverImage { large } averageScore format } }
+        upcoming: Page(page:1,perPage:14) { media(type:ANIME,status:NOT_YET_RELEASED,sort:POPULARITY_DESC) { id title { romaji english } coverImage { large } averageScore format } }
+        action: Page(page:1,perPage:14) { media(type:ANIME,genre:"Action",sort:POPULARITY_DESC) { id title { romaji english } coverImage { large } averageScore format } }
+        romance: Page(page:1,perPage:14) { media(type:ANIME,genre:"Romance",sort:POPULARITY_DESC) { id title { romaji english } coverImage { large } averageScore format } }
+        comedy: Page(page:1,perPage:14) { media(type:ANIME,genre:"Comedy",sort:POPULARITY_DESC) { id title { romaji english } coverImage { large } averageScore format } }
+        fantasy: Page(page:1,perPage:14) { media(type:ANIME,genre:"Fantasy",sort:POPULARITY_DESC) { id title { romaji english } coverImage { large } averageScore format } }
+        isekai: Page(page:1,perPage:14) { media(type:ANIME,genre:"Isekai",sort:POPULARITY_DESC) { id title { romaji english } coverImage { large } averageScore format } }
+        slice: Page(page:1,perPage:14) { media(type:ANIME,genre:"Slice of Life",sort:POPULARITY_DESC) { id title { romaji english } coverImage { large } averageScore format } }
+        mecha: Page(page:1,perPage:14) { media(type:ANIME,genre:"Mecha",sort:POPULARITY_DESC) { id title { romaji english } coverImage { large } averageScore format } }
+      }`;
+      try {
+        const d = await fetchAniList(q);
+        let html = '';
+        if (localStorage.getItem('anipulse_loggedin') === 'true') {
+          const cw = [
+            { id: 21, title: { romaji: 'One Piece' }, coverImage: { large: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-ELJzH32cJ69k.jpg' }, averageScore: 88, format: 'TV' },
+            { id: 16498, title: { romaji: 'Attack on Titan' }, coverImage: { large: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498-C6FPmWm59CyP.jpg' }, averageScore: 84, format: 'TV' }
+          ];
+          html += createSection('▶️ Continue Watching', cw, createAnimeCard, 'profile.html#history');
+        }
+        html += createSection('🔥 Trending Now', d.trending.media, createAnimeCard, 'browse.html?type=anime&sort=TRENDING_DESC&title=Trending');
+        html += createSection('🌟 Popular All Time', d.popular.media, createAnimeCard, 'browse.html?type=anime&sort=POPULARITY_DESC&title=Popular');
+        html += createSection('🏆 Top Rated', d.topRated.media, createAnimeCard, 'browse.html?type=anime&sort=SCORE_DESC&title=Top+Rated');
+        html += createSection('📺 Airing Now', d.airing.media, createAnimeCard, 'browse.html?type=anime&status=RELEASING&title=Airing+Now');
+        html += createSection('🚀 Upcoming Releases', d.upcoming.media, createAnimeCard, 'browse.html?type=anime&status=NOT_YET_RELEASED&title=Upcoming');
+        html += createSection('💥 Action', d.action.media, createAnimeCard, 'browse.html?type=anime&genre=Action&title=Action');
+        html += createSection('💕 Romance', d.romance.media, createAnimeCard, 'browse.html?type=anime&genre=Romance&title=Romance');
+        html += createSection('😂 Comedy', d.comedy.media, createAnimeCard, 'browse.html?type=anime&genre=Comedy&title=Comedy');
+        html += createSection('🧙 Fantasy', d.fantasy.media, createAnimeCard, 'browse.html?type=anime&genre=Fantasy&title=Fantasy');
+        html += createSection('🌀 Isekai', d.isekai.media, createAnimeCard, 'browse.html?type=anime&genre=Isekai&title=Isekai');
+        html += createSection('🌸 Slice of Life', d.slice.media, createAnimeCard, 'browse.html?type=anime&genre=Slice+of+Life&title=Slice+of+Life');
+        html += createSection('🤖 Mecha', d.mecha.media, createAnimeCard, 'browse.html?type=anime&genre=Mecha&title=Mecha');
+        c.innerHTML = html;
+        anime({ targets: c.children, opacity: [0, 1], translateY: [20, 0], duration: 500, easing: 'easeOutQuad', delay: anime.stagger(60) });
+      } catch (e) { c.innerHTML = '<p class="text-red-400 text-center">Failed to load anime.</p>'; }
+    }
+    async function loadMovieSections() {
+      const c = document.getElementById('homeSections');
+      c.innerHTML = createSkeletonRow() + createSkeletonRow() + createSkeletonRow();
+      const cats = [
+        { term: 'marvel', title: '🦸 Marvel' },
+        { term: 'dc comics', title: '🦇 DC' },
+        { term: 'action', title: '💥 Action' },
+        { term: 'comedy', title: '😂 Comedy' },
+        { term: 'horror', title: '👻 Horror' },
+        { term: 'romance', title: '💕 Romance' },
+        { term: 'sci-fi', title: '🚀 Sci-Fi' },
+        { term: 'animation', title: '🎨 Animation' },
+        { term: 'thriller', title: '🔪 Thriller' },
+        { term: 'drama 2025', title: '🎭 New Drama' },
+        { term: 'star wars', title: '⭐ Star Wars' },
+        { term: 'harry potter', title: '⚡ Harry Potter' }
+      ];
+      let html = '';
+      for (const cat of cats) {
+        try {
+          const results = await searchMovies(cat.term, 14);
+          if (results.length > 0) {
+            html += createSection(cat.title, results, createMovieCard, `browse.html?type=movie&q=${encodeURIComponent(cat.term)}&title=${encodeURIComponent(cat.title)}`);
+          }
+        } catch (e) { console.error('Failed:', cat.term, e); }
+      }
+      c.innerHTML = html || '<p class="text-gray-400 text-center">Movie data unavailable. Try refreshing.</p>';
+      anime({ targets: c.children, opacity: [0, 1], translateY: [20, 0], duration: 500, easing: 'easeOutQuad', delay: anime.stagger(60) });
+    }
+
+    async function loadTVSections() {
+      const c = document.getElementById('homeSections');
+      c.innerHTML = createSkeletonRow() + createSkeletonRow() + createSkeletonRow();
+      let html = '';
+
+      // On Air Today
+      try {
+        const schedule = await fetchTVSchedule();
+        const seen = new Set();
+        const shows = (schedule || [])
+          .filter(i => { if (seen.has(i.show?.id)) return false; seen.add(i.show?.id); return true; })
+          .filter(i => i.show?.image).slice(0, 14)
+          .map(i => ({ show: i.show }));
+        if (shows.length > 0) html += createSection('📡 On Air Today', shows, createTVCard, 'browse.html?type=tv&category=schedule&title=On+Air+Today');
+      } catch (e) { console.error(e); }
+
+      const cats = [
+        { q: 'drama', title: '🎭 Drama' },
+        { q: 'comedy', title: '😂 Comedy' },
+        { q: 'action', title: '💥 Action' },
+        { q: 'sci-fi', title: '🚀 Sci-Fi' },
+        { q: 'crime', title: '🕵️ Crime' },
+        { q: 'animation', title: '🎨 Animation' },
+        { q: 'reality', title: '📺 Reality' },
+        { q: 'documentary', title: '🎥 Documentary' },
+        { q: 'kids', title: '🧸 Kids' },
+        { q: 'fantasy', title: '🐉 Fantasy' },
+        { q: 'mystery', title: '🔍 Mystery' },
+        { q: 'romance', title: '💕 Romance' }
+      ];
+      for (const cat of cats) {
+        try {
+          const results = await searchTV(cat.q, 14);
+          if (results.length > 0) {
+            html += createSection(cat.title, results, createTVCard, `browse.html?type=tv&q=${encodeURIComponent(cat.q)}&title=${encodeURIComponent(cat.title)}`);
+          }
+        } catch (e) { console.error(e); }
+      }
+      c.innerHTML = html || '<p class="text-gray-400 text-center">TV data unavailable.</p>';
+      anime({ targets: c.children, opacity: [0, 1], translateY: [20, 0], duration: 500, easing: 'easeOutQuad', delay: anime.stagger(60) });
+    }
+
+    let currentMedia = 'anime';
+    function switchMedia(media) {
+      currentMedia = media;
+      document.querySelectorAll('.media-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.media-tab[data-media="${media}"]`).classList.add('active');
+      document.getElementById('heroBanner').classList.add('hidden');
+      document.getElementById('searchResultsSection').classList.add('hidden');
+      document.getElementById('homeSections').classList.remove('hidden');
+      if (media === 'anime') { loadHero(); loadAnimeSections(); }
+      else if (media === 'movie') { loadMovieSections(); }
+      else if (media === 'tv') { loadTVSections(); }
+    }
+    function getUsername() { return localStorage.getItem('anipulse_username') || ''; }
+    function isLoggedIn() { return localStorage.getItem('anipulse_loggedin') === 'true'; }
+
+    function updateAuthUI() {
+      const logged = isLoggedIn();
+      const user = getUsername();
+      const email = localStorage.getItem('anipulse_email') || '';
+      // Top-right icon
+      document.getElementById('userArea').innerHTML = logged
+        ? `<a href="profile.html" class="flex items-center gap-2 text-sm text-gray-300 hover:text-white"><span class="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center font-bold">${(user[0] || 'U').toUpperCase()}</span></a>`
+        : `<a href="login.html" class="text-sm font-semibold text-purple-400 hover:text-purple-300 bg-purple-600/10 border border-purple-600/40 px-4 py-1.5 rounded-full">Log In</a>`;
+      // Sidebar user card
+      const sbUser = document.getElementById('sidebarUser');
+      if (logged) {
+        sbUser.classList.remove('hidden');
+        document.getElementById('sbAvatar').textContent = (user[0] || 'U').toUpperCase();
+        document.getElementById('sbUsername').textContent = user;
+        document.getElementById('sbEmail').textContent = email;
+      } else sbUser.classList.add('hidden');
+      // Account dropdown
+      const acct = document.getElementById('accountContent');
+      if (logged) {
+        acct.innerHTML = `
+          <a href="profile.html" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">⚙️</span> Edit Profile</a>
+          <a href="profile.html#watchlist" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">📌</span> My Watchlist</a>
+          <a href="profile.html#history" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">🕒</span> Watch History</a>
+          <button id="logoutBtn" class="w-full sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-red-400"><span class="text-base">🚪</span> Log Out</button>`;
+        document.getElementById('logoutBtn').onclick = () => {
+          ['anipulse_loggedin','anipulse_username','anipulse_email'].forEach(k => localStorage.removeItem(k));
+          window.location.href = 'index.html';
+        };
+      } else {
+        acct.innerHTML = `
+          <a href="login.html" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">🔐</span> Log In</a>
+          <a href="login.html?signup=1" class="sb-item flex items-center gap-3 px-4 py-2.5 rounded-md text-sm text-gray-300"><span class="text-base">✨</span> Create Account</a>`;
+      }
+    }
+
+    function setupSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      const open = () => { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); document.body.style.overflow = 'hidden'; };
+      const close = () => { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); document.body.style.overflow = ''; };
+      document.getElementById('hamburgerBtn').onclick = open;
+      document.getElementById('closeSidebar').onclick = close;
+      overlay.onclick = close;
+
+      // Collapsible groups
+      document.querySelectorAll('.sb-header').forEach(btn => {
+        btn.onclick = () => {
+          const sub = btn.nextElementSibling;
+          const chev = btn.querySelector('.chev');
+          const isOpen = !sub.classList.contains('hidden');
+          document.querySelectorAll('.sb-sub').forEach(s => s.classList.add('hidden'));
+          document.querySelectorAll('.chev').forEach(c => c.classList.remove('rotated'));
+          if (!isOpen) { sub.classList.remove('hidden'); chev.classList.add('rotated'); }
+        };
+      });
+
+      // Dark toggle (visual + saved)
+      const dt = document.getElementById('darkToggle');
+      const dtOn = localStorage.getItem('anipulse_dark') !== 'false';
+      const syncDt = () => { dt.classList.toggle('bg-purple-600', dtOn); dt.querySelector('span').style.left = dtOn ? 'auto' : '0.125rem'; dt.querySelector('span').style.right = dtOn ? '0.125rem' : 'auto'; };
+      syncDt();
+      dt.onclick = () => { const v = localStorage.getItem('anipulse_dark') !== 'false'; localStorage.setItem('anipulse_dark', String(!v)); location.reload(); };
+
+      // Adult toggle
+      const at = document.getElementById('adultToggle');
+      const atOn = localStorage.getItem('anipulse_adult') === 'true';
+      const syncAt = () => { at.classList.toggle('bg-purple-600', atOn); at.classList.toggle('bg-gray-700', !atOn); at.querySelector('span').style.left = atOn ? 'auto' : '0.125rem'; at.querySelector('span').style.right = atOn ? '0.125rem' : 'auto'; };
+      syncAt();
+      at.onclick = () => { localStorage.setItem('anipulse_adult', localStorage.getItem('anipulse_adult') === 'true' ? 'false' : 'true'); syncAt(); };
+
+      // Notif toggle
+      const nt = document.getElementById('notifToggle');
+      const ntOn = localStorage.getItem('anipulse_notif') !== 'false';
+      const syncNt = () => { nt.classList.toggle('bg-purple-600', ntOn); nt.querySelector('span').style.left = ntOn ? 'auto' : '0.125rem'; nt.querySelector('span').style.right = ntOn ? '0.125rem' : 'auto'; };
+      syncNt();
+      nt.onclick = () => { localStorage.setItem('anipulse_notif', localStorage.getItem('anipulse_notif') !== 'false' ? 'false' : 'true'); syncNt(); };
+
+      // Region
+      const rs = document.getElementById('regionSelect');
+      rs.value = localStorage.getItem('anipulse_region') || 'US';
+      rs.onchange = () => localStorage.setItem('anipulse_region', rs.value);
+    }
+
+    let searchTimeout, currentAbortController = null;
+    function setupSearch() {
+      const input = document.getElementById('searchInput');
+      const spinner = document.getElementById('searchSpinner');
+      const clearBtn = document.getElementById('clearSearch');
+      const resultsSection = document.getElementById('searchResultsSection');
+      const searchGrid = document.getElementById('searchGrid');
+      const searchCount = document.getElementById('searchCount');
+      const noResults = document.getElementById('noResults');
+
+      function showHome() {
+        switchMedia(currentMedia);
+        input.value = '';
+        clearBtn.classList.add('hidden');
+      }
+      input.addEventListener('input', (e) => {
+        const q = e.target.value.trim();
+        clearTimeout(searchTimeout);
+        if (currentAbortController) currentAbortController.abort();
+        if (q === '') { showHome(); return; }
+        clearBtn.classList.remove('hidden');
+        clearBtn.onclick = showHome;
+        if (q.length < 2) return;
+        searchTimeout = setTimeout(async () => {
+          spinner.classList.remove('hidden');
+          resultsSection.classList.remove('hidden');
+          document.getElementById('heroBanner').classList.add('hidden');
+          document.getElementById('homeSections').classList.add('hidden');
+          noResults.classList.add('hidden');
+          searchCount.textContent = '';
+          searchGrid.innerHTML = '';
+          for (let i = 0; i < 12; i++) searchGrid.innerHTML += `<div class="w-full animate-pulse"><div class="skeleton w-full aspect-[2/3] rounded-lg mb-2"></div><div class="skeleton h-3 rounded w-3/4 mb-1"></div><div class="skeleton h-3 rounded w-1/2"></div></div>`;
+          const controller = new AbortController();
+          currentAbortController = controller;
+          const tid = setTimeout(() => controller.abort(), 10000);
+          try {
+            let results = [];
+            if (currentMedia === 'anime') {
+              const gql = `query ($s: String) { Page(page:1,perPage:18) { media(type:ANIME,search:$s,sort:POPULARITY_DESC) { id title { romaji english } coverImage { large } averageScore format } } }`;
+              const r = await fetch(ANILIST_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: gql, variables: { s: q } }), signal: controller.signal });
+              clearTimeout(tid);
+              const j = await r.json();
+              results = (j.data?.Page?.media || []).map(createAnimeCard);
+            } else if (currentMedia === 'movie') {
+              const data = await searchMovies(q, 18);
+              clearTimeout(tid);
+              results = data.map(createMovieCard);
+            } else if (currentMedia === 'tv') {
+              const data = await searchTV(q, 18);
+              clearTimeout(tid);
+              results = data.map(createTVCard);
+            }
+            searchGrid.innerHTML = '';
+            if (results.length === 0) { noResults.classList.remove('hidden'); searchCount.textContent = `No results for "${q}"`; }
+            else {
+              searchCount.textContent = `Found ${results.length} results for "${q}"`;
+              results.forEach(h => searchGrid.innerHTML += `<div class="w-full">${h}</div>`);
+              anime({ targets: searchGrid.children, opacity: [0, 1], scale: [0.9, 1], duration: 400, easing: 'easeOutQuad', delay: anime.stagger(50) });
+            }
+          } catch (err) { if (err.name !== 'AbortError') searchGrid.innerHTML = `<p class="col-span-full text-center text-red-400 mt-12">Search failed.</p>`; }
+          finally { spinner.classList.add('hidden'); }
+        }, 600);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      switchMedia('anime');
+      setupSearch();
+      setupSidebar();
+      updateAuthUI();
+      document.querySelectorAll('.media-tab').forEach(btn => btn.addEventListener('click', () => switchMedia(btn.dataset.media)));
+    });
+  </script>
+</body>
+</html>

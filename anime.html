@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anime Details - AniPulse</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .skeleton { background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .hero-gradient { background: linear-gradient(to top, #030712 5%, rgba(3,7,18,0.7) 40%, rgba(3,7,18,0.3) 100%); }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+  <header class="sticky top-0 z-50 bg-gray-900/80 backdrop-blur-md border-b border-gray-800 px-4 py-3 flex justify-between items-center">
+    <a href="index.html" class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">🎌 AniPulse</a>
+    <div class="flex items-center gap-4 text-xl">
+      <a href="settings.html" class="hover:scale-110 transition-transform text-gray-400 hover:text-white">⚙️</a>
+      <a href="login.html" class="hover:scale-110 transition-transform text-gray-400 hover:text-white">👤</a>
+    </div>
+  </header>
+  <main id="mainContent" class="min-h-screen"></main>
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
+  <script>
+    const ANILIST_URL = 'https://graphql.anilist.co';
+    const params = new URLSearchParams(window.location.search);
+    const animeId = params.get('id');
+    const main = document.getElementById('mainContent');
+
+    function skeletonPage() {
+      main.innerHTML = '<div class="w-full h-64 md:h-96 skeleton"></div><div class="p-4 md:p-8 max-w-5xl mx-auto -mt-32 relative z-10"><div class="flex flex-col md:flex-row gap-6"><div class="w-48 h-72 skeleton rounded-lg flex-shrink-0"></div><div class="flex-1 space-y-3"><div class="h-8 skeleton rounded w-3/4"></div><div class="h-4 skeleton rounded w-1/2"></div><div class="h-4 skeleton rounded w-full"></div><div class="h-4 skeleton rounded w-full"></div><div class="h-4 skeleton rounded w-2/3"></div></div></div></div>';
+    }
+
+    async function fetchDetails() {
+      const query = 'query ($id: Int) { Media(id: $id, type: ANIME) { id title { romaji english native } description(asHtml: false) coverImage { extraLarge large } bannerImage averageScore meanScore popularity favourites episodes duration status season seasonYear format genres studios(isMain: true) { nodes { name } } trailer { id site } nextAiringEpisode { episode airingAt } streamingEpisodes { title url site } recommendations(sort: RATING_DESC, perPage: 12) { nodes { mediaRecommendation { id title { romaji english } coverImage { large } averageScore format } } } } }';
+      const res = await fetch(ANILIST_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, variables: { id: parseInt(animeId) } }) });
+      return (await res.json()).data.Media;
+    }
+
+    function formatStatus(status) {
+      const map = { FINISHED: 'Finished', RELEASING: 'Airing', NOT_YET_RELEASED: 'Upcoming', CANCELLED: 'Cancelled', HIATUS: 'On Hiatus' };
+      return map[status] || status;
+    }
+    function renderDetails(a) {
+      const title = a.title.english || a.title.romaji;
+      const banner = a.bannerImage || a.coverImage.extraLarge;
+      const studio = a.studios && a.studios.nodes && a.studios.nodes[0] ? a.studios.nodes[0].name : 'Unknown Studio';
+      const year = a.seasonYear || '';
+      const season = a.season ? a.season.charAt(0) + a.season.slice(1).toLowerCase() : '';
+      const score = a.averageScore || 'N/A';
+      const episodes = a.episodes || '?';
+      const duration = a.duration ? a.duration + ' min' : '';
+      const trailerBtn = a.trailer && a.trailer.site === 'youtube' ? '<a href="https://youtube.com/watch?v=' + a.trailer.id + '" target="_blank" rel="noopener" class="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-bold px-6 py-3 rounded-lg transition-colors">🎬 Watch Trailer</a>' : '';
+      const airingInfo = a.nextAiringEpisode ? '<div class="bg-purple-900/40 border border-purple-700/50 rounded-lg p-3 mt-4 text-sm"><span class="text-purple-300 font-bold">📅 Next Episode:</span> Episode ' + a.nextAiringEpisode.episode + ' airs ' + new Date(a.nextAiringEpisode.airingAt * 1000).toLocaleDateString() + '</div>' : '';
+
+      let streamingLinks = '<p class="text-gray-500 text-sm">No official streaming links available.</p>';
+      if (a.streamingEpisodes && a.streamingEpisodes.length > 0) {
+        const seen = new Set();
+        streamingLinks = a.streamingEpisodes.filter(ep => { if (seen.has(ep.site)) return false; seen.add(ep.site); return true; }).map(ep => '<a href="' + ep.url + '" target="_blank" rel="noopener" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors"><span class="text-purple-400 font-bold">▶</span> ' + ep.site + '</a>').join('');
+      }
+
+      const recs = a.recommendations && a.recommendations.nodes ? a.recommendations.nodes.filter(r => r.mediaRecommendation) : [];
+      const recCards = recs.map(r => {
+        const rec = r.mediaRecommendation;
+        const recTitle = rec.title.english || rec.title.romaji;
+        return '<a href="anime.html?id=' + rec.id + '" class="group w-32 md:w-40 flex-shrink-0 block"><div class="relative overflow-hidden rounded-lg bg-gray-900"><img src="' + rec.coverImage.large + '" alt="' + recTitle + '" loading="lazy" class="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300" /><div class="absolute top-1.5 right-1.5 bg-black/80 text-yellow-400 text-[10px] px-1.5 py-0.5 rounded">★ ' + (rec.averageScore || 'N/A') + '</div><div class="absolute top-1.5 left-1.5 bg-purple-900/90 text-purple-200 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase">' + (rec.format || 'TV') + '</div></div><h3 class="text-xs font-semibold mt-2 line-clamp-2 leading-tight h-8">' + recTitle + '</h3></a>';
+      }).join('');
+
+      const nativeTitle = a.title.native ? '<p class="text-gray-400 text-sm mb-3">' + a.title.native + '</p>' : '';
+      const seasonYear = year ? '<span class="bg-gray-800 px-2 py-0.5 rounded">' + season + ' ' + year + '</span>' : '';
+      const durationPill = duration ? '<span class="bg-gray-800 px-2 py-0.5 rounded">' + duration + '</span>' : '';
+      const genres = (a.genres || []).map(g => '<span class="bg-purple-900/60 text-purple-200 text-xs px-3 py-1 rounded-full border border-purple-700/50">' + g + '</span>').join('');
+      const recSection = recCards ? '<div class="mt-10"><h2 class="text-xl font-bold text-purple-300 mb-3">✨ You May Also Like</h2><div class="flex overflow-x-auto gap-3 pb-4 no-scrollbar">' + recCards + '</div></div>' : '';
+
+      main.innerHTML =
+        '<div class="relative w-full h-64 md:h-96 overflow-hidden"><img src="' + banner + '" alt="banner" class="w-full h-full object-cover" /><div class="absolute inset-0 hero-gradient"></div></div>' +
+        '<div class="p-4 md:p-8 max-w-5xl mx-auto -mt-40 relative z-10">' +
+          '<a href="index.html" class="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 mb-4 text-sm font-semibold">← Back to Home</a>' +
+          '<div class="flex flex-col md:flex-row gap-6">' +
+            '<img src="' + a.coverImage.extraLarge + '" alt="' + title + '" class="w-40 md:w-56 rounded-lg shadow-2xl border-2 border-gray-800 flex-shrink-0 mx-auto md:mx-0" />' +
+            '<div class="flex-1">' +
+              '<h1 class="text-2xl md:text-4xl font-extrabold mb-2">' + title + '</h1>' + nativeTitle +
+              '<div class="flex flex-wrap items-center gap-3 mb-4 text-sm"><span class="text-yellow-400 font-bold">★ ' + score + '</span><span class="text-gray-500">•</span><span class="bg-gray-800 px-2 py-0.5 rounded">' + (a.format || 'TV') + '</span><span class="bg-gray-800 px-2 py-0.5 rounded">' + formatStatus(a.status) + '</span>' + seasonYear + '<span class="bg-gray-800 px-2 py-0.5 rounded">' + episodes + ' eps</span>' + durationPill + '</div>' +
+              '<div class="flex flex-wrap gap-2 mb-5">' + genres + '</div>' +
+              '<div class="flex flex-wrap gap-3">' + trailerBtn + '</div>' + airingInfo +
+            '</div>' +
+          '</div>' +
+          '<div class="mt-10"><h2 class="text-xl font-bold text-purple-300 mb-3">📖 Synopsis</h2><p class="text-gray-300 leading-relaxed text-sm md:text-base">' + (a.description || 'No description available.') + '</p></div>' +
+          '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">' +
+            '<div class="bg-gray-900 border border-gray-800 rounded-lg p-4 text-center"><p class="text-2xl font-bold text-purple-400">' + (a.popularity ? a.popularity.toLocaleString() : '0') + '</p><p class="text-xs text-gray-400 mt-1">Popularity</p></div>' +
+            '<div class="bg-gray-900 border border-gray-800 rounded-lg p-4 text-center"><p class="text-2xl font-bold text-purple-400">' + (a.favourites ? a.favourites.toLocaleString() : '0') + '</p><p class="text-xs text-gray-400 mt-1">Favourites</p></div>' +
+            '<div class="bg-gray-900 border border-gray-800 rounded-lg p-4 text-center"><p class="text-2xl font-bold text-purple-400">' + (a.meanScore || 'N/A') + '</p><p class="text-xs text-gray-400 mt-1">Mean Score</p></div>' +
+            '<div class="bg-gray-900 border border-gray-800 rounded-lg p-4 text-center"><p class="text-sm font-bold text-purple-400 line-clamp-2">' + studio + '</p><p class="text-xs text-gray-400 mt-1">Studio</p></div>' +
+          '</div>' +
+          '<div class="mt-10"><h2 class="text-xl font-bold text-purple-300 mb-3">🎬 Watch on Official Platforms</h2><div class="flex flex-wrap gap-3">' + streamingLinks + '</div></div>' +
+          recSection +
+        '</div>';
+
+      anime({ targets: main.querySelectorAll('a, img, h1, p'), opacity: [0, 1], translateY: [20, 0], duration: 500, easing: 'easeOutQuad', delay: anime.stagger(30) });
+    }
+    async function init() {
+      if (!animeId) {
+        main.innerHTML = '<p class="text-center text-red-400 mt-20">No anime ID provided. <a href="index.html" class="text-purple-400 underline">Go home</a></p>';
+        return;
+      }
+      skeletonPage();
+      try {
+        const anime = await fetchDetails();
+        if (!anime) throw new Error('Not found');
+        renderDetails(anime);
+        document.title = (anime.title.english || anime.title.romaji) + ' - AniPulse';
+      } catch (e) {
+        console.error(e);
+        main.innerHTML = '<div class="text-center mt-20"><p class="text-5xl mb-4">😕</p><p class="text-xl font-semibold">Anime not found</p><a href="index.html" class="text-purple-400 underline mt-4 inline-block">← Back to home</a></div>';
+      }
+    }
+    init();
+  </script>
+</body>
+</html>
